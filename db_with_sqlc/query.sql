@@ -9,6 +9,16 @@ LIMIT $1;
 -- name: ListClients :many
 SELECT * FROM client;
 
+-- name: ListSalariesASC :many
+SELECT *
+FROM employee
+ORDER BY salary ASC;
+
+-- name: ListSalariesDESC :many
+SELECT *
+FROM employee
+ORDER BY salary DESC;
+
 -- name: FindEmployeeByName :many
 SELECT * FROM employee WHERE first_name = @n;
 
@@ -27,3 +37,4 @@ SELECT *
 FROM employee
 WHERE salary >= @min AND salary < @max
 AND (@sex::VARCHAR IS NULL OR sex = @sex::VARCHAR);
+

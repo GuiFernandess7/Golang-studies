@@ -31,9 +31,11 @@ func main(){
 
 	ctx := context.Background()
 	db_repository := database.New(db)
-	sex := "F"
+	//sex := "F"
 
-	employee, err := use_cases.GetEmployeesBy(50000, 70000, &sex, db_repository, ctx)
+	employee, err := use_cases.ListSalariesByEmployee("ASC", db_repository, ctx)
+	//ListSalariesByEmployee("DESC", db_repository, ctx)
+	//GetEmployeesBy(50000, 70000, &sex, db_repository, ctx)
 	//use_cases.SearchEmployeeBySex("M", db_repository, ctx)
 	//GetEmployeesBySalaryRange(10000, 70000, db_repository, ctx)
 
