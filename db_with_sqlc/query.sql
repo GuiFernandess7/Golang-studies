@@ -6,9 +6,6 @@ SELECT * FROM employee
 ORDER BY emp_id DESC
 LIMIT $1;
 
--- name: ListClients :many
-SELECT * FROM client;
-
 -- name: ListSalariesASC :many
 SELECT *
 FROM employee
@@ -38,3 +35,5 @@ FROM employee
 WHERE salary >= @min AND salary < @max
 AND (@sex::VARCHAR IS NULL OR sex = @sex::VARCHAR);
 
+-- name: ListClients :many
+SELECT * FROM client;
