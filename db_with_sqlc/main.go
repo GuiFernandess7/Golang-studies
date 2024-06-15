@@ -8,7 +8,8 @@ import (
 	"net/url"
 	"os"
 
-	database "github.com/GuiFernandess7/db_with_sqlc/sqlc"
+	database "github.com/GuiFernandess7/db_with_sqlc/db"
+	"github.com/GuiFernandess7/db_with_sqlc/use_cases"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -19,7 +20,7 @@ func main(){
 		log.Fatal("Erro ao carregar o arquivo .env")
 	}
 
-	db, err := setDBConnection("postgres://postgres:%s@localhost:5432/dunder_mifflin?sslmode=disable")
+	db, err := setDBConnection(os.Getenv("CONN_STRING"), os.Getenv("SECRET"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -29,30 +30,24 @@ func main(){
 	defer db.Close()
 
 	ctx := context.Background()
-	handler := database.New(db)
+	db_repository := database.New(db)
+	sex := "F"
 
-	firstName := sql.NullString{
-        String: "Michael",
-        Valid:  true,
-    }
-
-	employee, err := handler.FindEmployeeByName(ctx, firstName)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-	//employees, err := queries.ListAllEmployeesBy(ctx, 3)
+	employee, err := use_cases.GetEmployeesBy(50000, 70000, &sex, db_repository, ctx)
+	//use_cases.SearchEmployeeBySex("M", db_repository, ctx)
+	//GetEmployeesBySalaryRange(10000, 70000, db_repository, ctx)
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 		return
 	}
 
-	fmt.Println(employee)
+	for i := range employee {
+		fmt.Println(employee[i].FirstName.String, "|", employee[i].Salary.Int32)
+	}
 }
 
-func setDBConnection(conn_str string) (*sql.DB, error){
-	password := os.Getenv("SECRET")
+func setDBConnection(conn_str string, password string) (*sql.DB, error){
 	if password == "" {
 		log.Fatal("A variável de ambiente SECRET não está definida")
 	}
