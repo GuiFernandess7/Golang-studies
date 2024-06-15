@@ -7,15 +7,15 @@ package database
 
 import (
 	"context"
+	"database/sql"
 )
 
-const listEmployees = `-- name: ListEmployees :many
-SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee
+const findEmployeeByName = `-- name: FindEmployeeByName :many
+SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee WHERE first_name = $1
 `
 
-// queries.sql
-func (q *Queries) ListEmployees(ctx context.Context) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployees)
+func (q *Queries) FindEmployeeByName(ctx context.Context, n sql.NullString) ([]Employee, error) {
+	rows, err := q.db.QueryContext(ctx, findEmployeeByName, n)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +33,107 @@ func (q *Queries) ListEmployees(ctx context.Context) ([]Employee, error) {
 			&i.SuperID,
 			&i.BranchID,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllEmployees = `-- name: ListAllEmployees :many
+SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee
+`
+
+func (q *Queries) ListAllEmployees(ctx context.Context) ([]Employee, error) {
+	rows, err := q.db.QueryContext(ctx, listAllEmployees)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Employee
+	for rows.Next() {
+		var i Employee
+		if err := rows.Scan(
+			&i.EmpID,
+			&i.FirstName,
+			&i.LastName,
+			&i.BirthDay,
+			&i.Sex,
+			&i.Salary,
+			&i.SuperID,
+			&i.BranchID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllEmployeesBy = `-- name: ListAllEmployeesBy :many
+SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee
+ORDER BY emp_id ASC
+LIMIT $1
+`
+
+func (q *Queries) ListAllEmployeesBy(ctx context.Context, limit int32) ([]Employee, error) {
+	rows, err := q.db.QueryContext(ctx, listAllEmployeesBy, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Employee
+	for rows.Next() {
+		var i Employee
+		if err := rows.Scan(
+			&i.EmpID,
+			&i.FirstName,
+			&i.LastName,
+			&i.BirthDay,
+			&i.Sex,
+			&i.Salary,
+			&i.SuperID,
+			&i.BranchID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listClients = `-- name: ListClients :many
+SELECT client_id, client_name, branch_id FROM client
+`
+
+func (q *Queries) ListClients(ctx context.Context) ([]Client, error) {
+	rows, err := q.db.QueryContext(ctx, listClients)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Client
+	for rows.Next() {
+		var i Client
+		if err := rows.Scan(&i.ClientID, &i.ClientName, &i.BranchID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
