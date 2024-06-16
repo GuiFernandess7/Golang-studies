@@ -1,0 +1,13 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "dunder_mifflin_local",
+            "database": "dunder_mifflin",
+            "username": "postgres",
+            "connectString": "postgres://postgres:gui2002@localhost:5432/dunder_mifflin?sslmode=disable"
+        }
+    ]
+}
