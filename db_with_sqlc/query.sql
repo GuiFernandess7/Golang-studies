@@ -35,5 +35,24 @@ FROM employee
 WHERE salary >= @min AND salary < @max
 AND (@sex::VARCHAR IS NULL OR sex = @sex::VARCHAR);
 
+-- name: EmployeesCount :one
+SELECT COUNT(emp_id)
+FROM employee;
+
+-- name: GetEmployeeByBranch :many
+SELECT employee.emp_id, employee.first_name, employee.last_name, branch.branch_name
+FROM employee
+JOIN branch
+ON branch.branch_id = employee.branch_id
+WHERE branch.branch_name = @b_name::VARCHAR;
+
+-- name: ListManagers :many
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+JOIN branch
+ON employee.emp_id = branch.mgr_id;
+
 -- name: ListClients :many
 SELECT * FROM client;
+
+
