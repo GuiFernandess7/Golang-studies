@@ -10,6 +10,18 @@ import (
 	"database/sql"
 )
 
+const employeesCount = `-- name: EmployeesCount :one
+SELECT COUNT(emp_id)
+FROM employee
+`
+
+func (q *Queries) EmployeesCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, employeesCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const filterEmployeeBySalary = `-- name: FilterEmployeeBySalary :many
 SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id
 FROM employee
@@ -172,6 +184,49 @@ func (q *Queries) FindEmployeeByName(ctx context.Context, n sql.NullString) ([]E
 	return items, nil
 }
 
+const getEmployeeByBranch = `-- name: GetEmployeeByBranch :many
+SELECT employee.emp_id, employee.first_name, employee.last_name, branch.branch_name
+FROM employee
+JOIN branch
+ON branch.branch_id = employee.branch_id
+WHERE branch.branch_name = $1::VARCHAR
+`
+
+type GetEmployeeByBranchRow struct {
+	EmpID      int32
+	FirstName  sql.NullString
+	LastName   sql.NullString
+	BranchName sql.NullString
+}
+
+func (q *Queries) GetEmployeeByBranch(ctx context.Context, bName string) ([]GetEmployeeByBranchRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEmployeeByBranch, bName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEmployeeByBranchRow
+	for rows.Next() {
+		var i GetEmployeeByBranchRow
+		if err := rows.Scan(
+			&i.EmpID,
+			&i.FirstName,
+			&i.LastName,
+			&i.BranchName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAllEmployees = `-- name: ListAllEmployees :many
 SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee
 `
@@ -260,6 +315,42 @@ func (q *Queries) ListClients(ctx context.Context) ([]Client, error) {
 	for rows.Next() {
 		var i Client
 		if err := rows.Scan(&i.ClientID, &i.ClientName, &i.BranchID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listManagers = `-- name: ListManagers :many
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+JOIN branch
+ON employee.emp_id = branch.mgr_id
+`
+
+type ListManagersRow struct {
+	EmpID      int32
+	FirstName  sql.NullString
+	BranchName sql.NullString
+}
+
+func (q *Queries) ListManagers(ctx context.Context) ([]ListManagersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listManagers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListManagersRow
+	for rows.Next() {
+		var i ListManagersRow
+		if err := rows.Scan(&i.EmpID, &i.FirstName, &i.BranchName); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
