@@ -17,13 +17,13 @@ import (
 func main(){
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Erro ao carregar o arquivo .env")
+		log.Fatal("Error loading the .env file")
 	}
 
 	db, err := setDBConnection(os.Getenv("CONN_STRING"), os.Getenv("SECRET"))
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error connecting to database: %v", err)
 		return
 	}
 
@@ -31,18 +31,8 @@ func main(){
 
 	ctx := context.Background()
 	db_repository := database.New(db)
-	//sex := "F"
 
 	employee, err := use_cases.SearchEmployeesBySalesQtd(1000, 20000, db_repository, ctx)
-	//GetClientbyBranch(ctx)
-	//ListAllEmployees(ctx)
-	//ListManagers(ctx)
-	//.GetEmployeeByBranch(ctx, "Scranton")
-	//.ListSalariesByEmployee("ASC", db_repository, ctx)
-	//ListSalariesByEmployee("DESC", db_repository, ctx)
-	//GetEmployeesBy(50000, 70000, &sex, db_repository, ctx)
-	//use_cases.SearchEmployeeBySex("M", db_repository, ctx)
-	//GetEmployeesBySalaryRange(10000, 70000, db_repository, ctx)
 
 	if err != nil {
 		fmt.Println(err)
@@ -56,7 +46,7 @@ func main(){
 
 func setDBConnection(conn_str string, password string) (*sql.DB, error){
 	if password == "" {
-		log.Fatal("A variável de ambiente SECRET não está definida")
+		log.Fatal("Password variable is not defined")
 	}
 
 	encodedPassword := url.QueryEscape(password)
