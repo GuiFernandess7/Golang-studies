@@ -9,7 +9,6 @@ import (
 	"os"
 
 	database "github.com/GuiFernandess7/db_with_sqlc/db"
-	"github.com/GuiFernandess7/db_with_sqlc/use_cases"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -33,7 +32,9 @@ func main(){
 	db_repository := database.New(db)
 	//sex := "F"
 
-	employee, err := use_cases.ListSalariesByEmployee("ASC", db_repository, ctx)
+	employee, err := db_repository.ListManagers(ctx)
+	//.GetEmployeeByBranch(ctx, "Scranton")
+	//.ListSalariesByEmployee("ASC", db_repository, ctx)
 	//ListSalariesByEmployee("DESC", db_repository, ctx)
 	//GetEmployeesBy(50000, 70000, &sex, db_repository, ctx)
 	//use_cases.SearchEmployeeBySex("M", db_repository, ctx)
@@ -45,7 +46,7 @@ func main(){
 	}
 
 	for i := range employee {
-		fmt.Println(employee[i].FirstName.String, "|", employee[i].Salary.Int32)
+		fmt.Println(employee[i])
 	}
 }
 
