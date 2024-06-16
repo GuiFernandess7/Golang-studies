@@ -184,6 +184,73 @@ func (q *Queries) FindEmployeeByName(ctx context.Context, n sql.NullString) ([]E
 	return items, nil
 }
 
+const getClientbyBranch = `-- name: GetClientbyBranch :many
+SELECT client.client_id, client_name, branch.branch_name
+FROM client
+JOIN branch
+ON branch.branch_id = client.branch_id
+`
+
+type GetClientbyBranchRow struct {
+	ClientID   int32
+	ClientName sql.NullString
+	BranchName sql.NullString
+}
+
+func (q *Queries) GetClientbyBranch(ctx context.Context) ([]GetClientbyBranchRow, error) {
+	rows, err := q.db.QueryContext(ctx, getClientbyBranch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetClientbyBranchRow
+	for rows.Next() {
+		var i GetClientbyBranchRow
+		if err := rows.Scan(&i.ClientID, &i.ClientName, &i.BranchName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getClientsByEmployee = `-- name: GetClientsByEmployee :many
+SELECT c.client_name
+FROM client c
+JOIN branch b ON c.branch_id = b.branch_id
+JOIN employee e ON b.mgr_id = e.emp_id
+WHERE e.first_name = $1::VARCHAR
+`
+
+func (q *Queries) GetClientsByEmployee(ctx context.Context, firstName string) ([]sql.NullString, error) {
+	rows, err := q.db.QueryContext(ctx, getClientsByEmployee, firstName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []sql.NullString
+	for rows.Next() {
+		var client_name sql.NullString
+		if err := rows.Scan(&client_name); err != nil {
+			return nil, err
+		}
+		items = append(items, client_name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEmployeeByBranch = `-- name: GetEmployeeByBranch :many
 SELECT employee.emp_id, employee.first_name, employee.last_name, branch.branch_name
 FROM employee
@@ -227,19 +294,119 @@ func (q *Queries) GetEmployeeByBranch(ctx context.Context, bName string) ([]GetE
 	return items, nil
 }
 
-const listAllEmployees = `-- name: ListAllEmployees :many
-SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee
+const getEmployeeBySalesQtd = `-- name: GetEmployeeBySalesQtd :many
+SELECT employee.first_name, employee.last_name
+FROM employee
+WHERE employee.emp_id IN (
+    SELECT works_with.emp_id
+    FROM works_with
+    WHERE works_with.total_sales > $1::INT
+    AND works_with.total_sales < $2::INT
+)
 `
 
-func (q *Queries) ListAllEmployees(ctx context.Context) ([]Employee, error) {
+type GetEmployeeBySalesQtdParams struct {
+	Min int32
+	Max int32
+}
+
+type GetEmployeeBySalesQtdRow struct {
+	FirstName sql.NullString
+	LastName  sql.NullString
+}
+
+func (q *Queries) GetEmployeeBySalesQtd(ctx context.Context, arg GetEmployeeBySalesQtdParams) ([]GetEmployeeBySalesQtdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEmployeeBySalesQtd, arg.Min, arg.Max)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEmployeeBySalesQtdRow
+	for rows.Next() {
+		var i GetEmployeeBySalesQtdRow
+		if err := rows.Scan(&i.FirstName, &i.LastName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSupplierByType = `-- name: GetSupplierByType :many
+SELECT branch_supplier.supplier_name, branch.branch_name, branch_supplier.supply_type
+FROM branch_supplier
+JOIN branch
+ON branch_supplier.branch_id = branch.branch_id
+WHERE branch_supplier.supply_type = $1::VARCHAR
+`
+
+type GetSupplierByTypeRow struct {
+	SupplierName string
+	BranchName   sql.NullString
+	SupplyType   sql.NullString
+}
+
+func (q *Queries) GetSupplierByType(ctx context.Context, type_ string) ([]GetSupplierByTypeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSupplierByType, type_)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSupplierByTypeRow
+	for rows.Next() {
+		var i GetSupplierByTypeRow
+		if err := rows.Scan(&i.SupplierName, &i.BranchName, &i.SupplyType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllEmployees = `-- name: ListAllEmployees :many
+SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, employee.branch_id, branch.branch_id, branch_name, mgr_id, mgr_start_date
+FROM employee
+LEFT JOIN branch
+ON employee.emp_id = branch.mgr_id
+`
+
+type ListAllEmployeesRow struct {
+	EmpID        int32
+	FirstName    sql.NullString
+	LastName     sql.NullString
+	BirthDay     sql.NullTime
+	Sex          sql.NullString
+	Salary       sql.NullInt32
+	SuperID      sql.NullInt32
+	BranchID     sql.NullInt32
+	BranchID_2   sql.NullInt32
+	BranchName   sql.NullString
+	MgrID        sql.NullInt32
+	MgrStartDate sql.NullTime
+}
+
+// Get all employees including their branches
+func (q *Queries) ListAllEmployees(ctx context.Context) ([]ListAllEmployeesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAllEmployees)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Employee
+	var items []ListAllEmployeesRow
 	for rows.Next() {
-		var i Employee
+		var i ListAllEmployeesRow
 		if err := rows.Scan(
 			&i.EmpID,
 			&i.FirstName,
@@ -249,6 +416,10 @@ func (q *Queries) ListAllEmployees(ctx context.Context) ([]Employee, error) {
 			&i.Salary,
 			&i.SuperID,
 			&i.BranchID,
+			&i.BranchID_2,
+			&i.BranchName,
+			&i.MgrID,
+			&i.MgrStartDate,
 		); err != nil {
 			return nil, err
 		}
@@ -264,20 +435,39 @@ func (q *Queries) ListAllEmployees(ctx context.Context) ([]Employee, error) {
 }
 
 const listAllEmployeesBy = `-- name: ListAllEmployeesBy :many
-SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, branch_id FROM employee
+SELECT emp_id, first_name, last_name, birth_day, sex, salary, super_id, employee.branch_id, branch.branch_id, branch_name, mgr_id, mgr_start_date
+FROM employee
+LEFT JOIN branch
+ON employee.emp_id = branch.mgr_id
 ORDER BY emp_id DESC
 LIMIT $1
 `
 
-func (q *Queries) ListAllEmployeesBy(ctx context.Context, limit int32) ([]Employee, error) {
+type ListAllEmployeesByRow struct {
+	EmpID        int32
+	FirstName    sql.NullString
+	LastName     sql.NullString
+	BirthDay     sql.NullTime
+	Sex          sql.NullString
+	Salary       sql.NullInt32
+	SuperID      sql.NullInt32
+	BranchID     sql.NullInt32
+	BranchID_2   sql.NullInt32
+	BranchName   sql.NullString
+	MgrID        sql.NullInt32
+	MgrStartDate sql.NullTime
+}
+
+// Get All employees by limit in order desc
+func (q *Queries) ListAllEmployeesBy(ctx context.Context, limit int32) ([]ListAllEmployeesByRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAllEmployeesBy, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Employee
+	var items []ListAllEmployeesByRow
 	for rows.Next() {
-		var i Employee
+		var i ListAllEmployeesByRow
 		if err := rows.Scan(
 			&i.EmpID,
 			&i.FirstName,
@@ -287,34 +477,11 @@ func (q *Queries) ListAllEmployeesBy(ctx context.Context, limit int32) ([]Employ
 			&i.Salary,
 			&i.SuperID,
 			&i.BranchID,
+			&i.BranchID_2,
+			&i.BranchName,
+			&i.MgrID,
+			&i.MgrStartDate,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listClients = `-- name: ListClients :many
-SELECT client_id, client_name, branch_id FROM client
-`
-
-func (q *Queries) ListClients(ctx context.Context) ([]Client, error) {
-	rows, err := q.db.QueryContext(ctx, listClients)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Client
-	for rows.Next() {
-		var i Client
-		if err := rows.Scan(&i.ClientID, &i.ClientName, &i.BranchID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
